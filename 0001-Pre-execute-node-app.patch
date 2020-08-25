@@ -1,0 +1,65 @@
+From 3d84b27a8fbac8c7c6482c799c3c08d5f2cb6c92 Mon Sep 17 00:00:00 2001
+From: Amit Aryeh Levy <amit@amitlevy.com>
+Date: Wed, 19 Aug 2020 17:07:15 -0700
+Subject: [PATCH] Pre-execute node app
+
+---
+ separate/runtimes/nodejs/workload.js | 37 ++++++++++++++--------------
+ 1 file changed, 19 insertions(+), 18 deletions(-)
+
+diff --git a/separate/runtimes/nodejs/workload.js b/separate/runtimes/nodejs/workload.js
+index 072ffe1..d19256e 100644
+--- a/separate/runtimes/nodejs/workload.js
++++ b/separate/runtimes/nodejs/workload.js
+@@ -1,29 +1,30 @@
+ const vsock = require("vsock");
+ const { execSync, exec } = require("child_process");
+ 
+-// for snapshot
+-// this approach relies on that we are currently being executed on cpu 0
+-// and that other cpus writes to the port before us
+-// since as of now snapshots are created offline, we are fine
+-const cpu_count = require("os").cpus().length;
+-for (var i = 1; i < cpu_count; i++) {
+-    exec(`taskset -c ${i} outl 124 0x3f0`);
+-}
+-execSync('taskset -c 0 outl 124 0x3f0')
++(async function() {
++  // for snapshot
++  // this approach relies on that we are currently being executed on cpu 0
++  // and that other cpus writes to the port before us
++  // since as of now snapshots are created offline, we are fine
++  const cpu_count = require("os").cpus().length;
++  for (var i = 1; i < cpu_count; i++) {
++      exec(`taskset -c ${i} outl 124 0x3f0`);
++  }
++  execSync('taskset -c 0 outl 124 0x3f0')
+ 
+-execSync("mount -r /dev/vdb /srv");
++  execSync("mount -r /dev/vdb /srv");
+ 
+-module.paths.push("/srv/node_modules");
+-const app = require("/srv/workload");
++  module.paths.push("/srv/node_modules");
++  const app = require("/srv/workload");
++  await app.handle({});
+ 
+-for (var i = 1; i < cpu_count; i++) {
+-    exec(`taskset -c ${i} outl 124 0x3f0`);
+-}
+-execSync('taskset -c 0 outl 124 0x3f0')
++  for (var i = 1; i < cpu_count; i++) {
++      exec(`taskset -c ${i} outl 124 0x3f0`);
++  }
++  execSync('taskset -c 0 outl 124 0x3f0')
+ 
+-const sock_conn = vsock.connect(2, 1234);
++  const sock_conn = vsock.connect(2, 1234);
+ 
+-(async function() {
+   while (true) {
+     const req = await vsock.readRequest(sock_conn);
+ 
+-- 
+2.28.0
+

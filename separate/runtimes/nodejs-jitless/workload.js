@@ -1,12 +1,11 @@
 const vsock = require("vsock");
 const { execSync, exec } = require("child_process");
+const cpu_count = require("os").cpus().length;
 
-(async function() {
   // for snapshot
   // this approach relies on that we are currently being executed on cpu 0
   // and that other cpus writes to the port before us
   // since as of now snapshots are created offline, we are fine
-  const cpu_count = require("os").cpus().length;
   for (var i = 1; i < cpu_count; i++) {
       exec(`taskset -c ${i} outl 124 0x3f0`);
   }
@@ -16,7 +15,6 @@ const { execSync, exec } = require("child_process");
 
   module.paths.push("/srv/node_modules");
   const app = require("/srv/workload");
-  await app.handle({});
 
   for (var i = 1; i < cpu_count; i++) {
       exec(`taskset -c ${i} outl 124 0x3f0`);
@@ -25,6 +23,7 @@ const { execSync, exec } = require("child_process");
 
   const sock_conn = vsock.connect(2, 1234);
 
+(async function() {
   while (true) {
     const req = await vsock.readRequest(sock_conn);
 

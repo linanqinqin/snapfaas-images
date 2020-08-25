@@ -14,7 +14,7 @@ for dir in tmp dev proc run sys var; do mkdir /my-rootfs/${dir}; done
 # Copy application over
 cp -r /my-app/* /my-rootfs/srv
 
-if [ ! -d '/my-rootfs/srv/package' ]; then
+if [ ! -d '/my-rootfs/srv/package' ] && [ ! -d '/my-rootfs/srv/node_modules' ]; then
   echo 'Warning: /srv does not contain package directory'
 fi
 
